@@ -10,9 +10,9 @@ Contraintes du dépôt officiel (docs QGIS, « Releasing your plugin ») :
 - ``metadata.txt``, ``__init__.py`` et ``LICENSE`` obligatoires dans ce dossier ;
 - la licence doit s'appeler ``LICENSE``, **sans extension**.
 
-La licence vit à la racine du dépôt et n'a qu'une seule source : elle est
-injectée dans l'archive au moment de l'empaqueter, pour qu'il n'existe jamais
-deux copies à faire diverger.
+La licence est présente aux deux endroits où elle est attendue — à la racine du dépôt
+(GitHub l'affiche) et dans le dossier du plugin (le dépôt officiel l'exige dans l'archive).
+``verifier()`` contrôle que les deux copies sont identiques, pour qu'elles ne divergent pas.
 """
 
 import os
@@ -86,8 +86,6 @@ def construire():
     with zipfile.ZipFile(archive, "w", zipfile.ZIP_DEFLATED) as zip_:
         for complet, relatif in fichiers():
             zip_.write(complet, relatif)
-        # La licence n'existe qu'à la racine du dépôt : elle entre dans l'archive ici.
-        zip_.write(os.path.join(RACINE, LICENCE), "%s/%s" % (PLUGIN, LICENCE))
 
     print("%s — %.0f Ko" % (archive, os.path.getsize(archive) / 1024.0))
     return archive
@@ -138,6 +136,21 @@ def verifier():
         icone = "%s/%s" % (PLUGIN, valeur(champs, "icon") or "icon.png")
         if icone not in noms:
             problemes.append("icône introuvable dans l'archive : %s" % icone)
+
+        # La licence du dossier du plugin doit être identique à celle de la racine.
+        racine_licence = os.path.join(RACINE, LICENCE)
+        plugin_licence = os.path.join(RACINE, PLUGIN, LICENCE)
+        if not os.path.isfile(plugin_licence):
+            problemes.append("licence absente du dossier du plugin")
+        elif open(racine_licence, "rb").read() != open(plugin_licence, "rb").read():
+            problemes.append(
+                "les deux copies de %s ont divergé : recopiez la racine dans %s/" % (LICENCE, PLUGIN)
+            )
+
+        # Le dépôt doit porter exactement ce que l'archive contient (hors fichiers compilés).
+        for nom in noms:
+            if not os.path.isfile(os.path.join(RACINE, nom)):
+                problemes.append("fichier de l'archive absent du dépôt : %s" % nom)
 
         # 4. Le paquet doit rester sous la limite d'envoi du dépôt (20 Mo).
         if os.path.getsize(archive) > 20 * 1024 * 1024:

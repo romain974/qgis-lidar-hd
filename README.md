@@ -114,7 +114,7 @@ QGIS rend les nuages de points en 2D comme en 3D, sans réglage particulier.
 ## Crédits et licence
 
 Le plugin est distribué sous **GPL-2.0-or-later** (voir `LICENSE`), comme l'exige l'écosystème
-des extensions QGIS.
+des extensions QGIS. L'historique des versions est dans [`CHANGELOG.md`](CHANGELOG.md).
 
 Il a été écrit par l'auteur du **[simulateur de toiture](https://www.simulateur-toiture.fr)**,
 qui exploite les mêmes dalles LiDAR HD de l'IGN — mêmes fichiers, même format COPC, même

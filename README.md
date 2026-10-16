@@ -165,3 +165,15 @@ de l'archive pour tester l'artefact publié plutôt que les sources.
 ```bash
 PLUGIN_DIR=.../lidar_hd_emprise python tests/test_plugin_hors_qgis.py
 ```
+
+## English summary
+
+A QGIS plugin that turns the current map extent (or the selection of the active layer) into
+IGN LiDAR HD point-cloud tiles: it queries the national LiDAR HD catalogue on the
+Géoplateforme, lists the 1 km × 1 km `.copc.laz` tiles covering the extent, and adds them as
+point-cloud layers. Two modes: download the tiles, or stream only the COPC blocks needed for
+the current zoom through HTTP Range requests. Requires QGIS 3.32 or newer. Data: LiDAR HD
+© IGN, open data (Etalab 2.0). Written by the author of the
+[simulateur de toiture](https://www.simulateur-toiture.fr), an online tool that derives roof
+area, pitch and orientation from the same LiDAR HD tiles.
+

@@ -100,6 +100,93 @@ class FauxServeur(threading.Thread):
         self.serveur.shutdown()
 
 
+class TestSchemasRefuses(unittest.TestCase):
+    """Le WFS renvoie les URLs des dalles : elles ne doivent pas être suivies à l'aveugle.
+
+    Sans ce contrôle, une réponse détournée contenant ``file:///...`` ferait
+    ouvrir un fichier local, puis l'écrire dans le dossier de téléchargement.
+    """
+
+    def test_schemas_dangereux_refuses(self):
+        for url in (
+            "file:///C:/Windows/win.ini",
+            "file:///etc/passwd",
+            "ftp://exemple.fr/dalle.copc.laz",
+            "data:text/plain;base64,SGVsbG8=",
+            "gopher://exemple.fr/x",
+        ):
+            with self.assertRaises(lidarhd.ErreurIGN, msg=url):
+                lidarhd.verifier_url(url)
+
+    def test_http_et_https_acceptes(self):
+        self.assertEqual(
+            lidarhd.verifier_url("https://data.geopf.fr/x.copc.laz"),
+            "https://data.geopf.fr/x.copc.laz",
+        )
+        self.assertTrue(lidarhd.verifier_url("http://exemple.fr/x"))
+
+    def test_domaine_impose(self):
+        lidarhd.verifier_url("https://data.geopf.fr/x.copc.laz", hotes=("data.geopf.fr",))
+        for url in ("https://evil.example/x.copc.laz", "https://data.geopf.fr.evil.example/x"):
+            with self.assertRaises(lidarhd.ErreurIGN, msg=url):
+                lidarhd.verifier_url(url, hotes=("data.geopf.fr",))
+
+    def test_port_ignore_dans_le_domaine(self):
+        """Le domaine est comparé sans le port : un hôte légitime avec port passe."""
+        lidarhd.verifier_url("https://data.geopf.fr:443/x.copc.laz", hotes=("data.geopf.fr",))
+
+    def test_url_sans_domaine_refusee(self):
+        with self.assertRaises(lidarhd.ErreurIGN):
+            lidarhd.verifier_url("https:///chemin")
+
+    def test_telechargement_refuse_et_n_ecrit_rien(self):
+        dossier = tempfile.mkdtemp(prefix="lidarhd-refus-")
+        try:
+            destination = os.path.join(dossier, "piege.copc.laz")
+            with self.assertRaises(lidarhd.ErreurIGN):
+                lidarhd.telecharger("file:///C:/Windows/win.ini", destination)
+            self.assertEqual(os.listdir(dossier), [], "un fichier a été écrit malgré le refus")
+
+            with self.assertRaises(lidarhd.ErreurIGN):
+                lidarhd.telecharger("https://evil.example/d.copc.laz", destination)
+            self.assertEqual(os.listdir(dossier), [])
+        finally:
+            shutil.rmtree(dossier, ignore_errors=True)
+
+    def test_taille_refusee_renvoie_zero(self):
+        self.assertEqual(lidarhd.taille_fichier("file:///C:/Windows/win.ini"), 0)
+        self.assertEqual(lidarhd.taille_fichier("https://evil.example/x.copc.laz"), 0)
+
+    def test_reponse_wfs_detournee_ne_passe_pas(self):
+        """Bout en bout : une URL file:// dans url_npl n'atteint jamais le disque."""
+        detourne = {
+            "features": [
+                {
+                    "geometry": None,
+                    "properties": {
+                        "coordonnees_nw": "0000-0000",
+                        "nombre_points": 1,
+                        "url_npl": "file:///C:/Windows/win.ini",
+                    },
+                }
+            ]
+        }
+        vraie_lecture = lidarhd._lire
+        lidarhd._lire = lambda url, timeout=30: json.dumps(detourne).encode("utf-8")
+        try:
+            dalles = lidarhd.dalles_pour_emprise((0, 0, 1, 1))
+            self.assertEqual(len(dalles), 1)
+            dossier = tempfile.mkdtemp(prefix="lidarhd-detourne-")
+            try:
+                with self.assertRaises(lidarhd.ErreurIGN):
+                    lidarhd.telecharger(dalles[0]["url"], os.path.join(dossier, "x.copc.laz"))
+                self.assertEqual(os.listdir(dossier), [])
+            finally:
+                shutil.rmtree(dossier, ignore_errors=True)
+        finally:
+            lidarhd._lire = vraie_lecture
+
+
 class TestRequeteWfs(unittest.TestCase):
     def test_ordre_des_axes(self):
         """Le WFS 2.0 attend l'emprise en lat,lon — l'inverser renvoie zéro dalle."""
@@ -164,9 +251,14 @@ class TestTelechargement(unittest.TestCase):
         cls.serveur = FauxServeur(cls.contenu)
         cls.serveur.start()
         cls.dossier = tempfile.mkdtemp(prefix="lidarhd-test-")
+        # Le serveur de test écoute sur la boucle locale : on ouvre ce domaine
+        # le temps des tests, la liste d'hôtes reste fermée en production.
+        cls.hotes = lidarhd.HOTES_DONNEES
+        lidarhd.HOTES_DONNEES = ("127.0.0.1",)
 
     @classmethod
     def tearDownClass(cls):
+        lidarhd.HOTES_DONNEES = cls.hotes
         cls.serveur.stop()
         shutil.rmtree(cls.dossier, ignore_errors=True)
 

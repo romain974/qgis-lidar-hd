@@ -137,6 +137,13 @@ Les données restent la propriété de leurs producteurs :
 | `data.geopf.fr/wfs/ows` | catalogue des dalles (nom, emprise, nombre de points, URL du nuage) |
 | `data.geopf.fr/telechargement/download/LiDARHD-NUALID/...` | le fichier `.copc.laz` lui-même |
 
+Les URLs des nuages de points arrivent donc **depuis une réponse du WFS**, pas de votre saisie.
+Avant toute ouverture, chacune est contrôlée : le schéma doit être `http` ou `https`, et le
+domaine doit être celui de l'IGN (`data.geopf.fr`). Un `file://`, un `ftp://` ou un domaine
+tiers est refusé, rien n'est écrit, et l'erreur est affichée telle quelle. C'est le
+signalement Bandit `B310` qui a fait remonter ce point — la vérification est en place depuis
+la version 1.0.1.
+
 ## Développement
 
 ```bash

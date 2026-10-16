@@ -12,6 +12,7 @@ Source des données : programme LiDAR HD de l'IGN, diffusé en open data
 import json
 import os
 import urllib.error
+import urllib.parse
 import urllib.request
 
 # --- Services de l'IGN -------------------------------------------------------
@@ -19,10 +20,18 @@ import urllib.request
 WFS = "https://data.geopf.fr/wfs/ows"
 COUCHE_METADONNEE = "IGNF_LIDAR-HD_METADONNEE:metadata"
 
+# Hôtes des dalles : les URLs de nuages de points viennent du WFS, on ne les
+# ouvre que si elles pointent bien chez le diffuseur.
+HOTES_DONNEES = ("data.geopf.fr",)
+
 AGENT = "QGIS-LiDAR-HD-Emprise"
 
 # Le WFS n'accepte l'emprise qu'en WGS84, et dans l'ordre lat,lon (WFS 2.0).
 CRS_REQUETE = "epsg:4326"
+
+# Seuls ces schémas sont ouverts. Sans ce garde-fou, une URL `file:///` ou
+# `ftp://` injectée dans une réponse du WFS serait suivie telle quelle.
+SCHEMAS_AUTORISES = ("http", "https")
 
 
 class ErreurIGN(Exception):
@@ -32,10 +41,50 @@ class ErreurIGN(Exception):
 # --- Utilitaires -------------------------------------------------------------
 
 
+def verifier_url(url, hotes=None):
+    """Refuse tout ce qui n'est pas une URL http(s) attendue.
+
+    Lève ``ErreurIGN`` si le schéma n'est pas http ou https, ou si ``hotes`` est
+    fourni et que le domaine n'en fait pas partie. Renvoie l'URL inchangée.
+    """
+    if not isinstance(url, str):
+        raise ErreurIGN("URL invalide : %r" % (url,))
+    parties = urllib.parse.urlsplit(url)
+    if parties.scheme.lower() not in SCHEMAS_AUTORISES:
+        raise ErreurIGN(
+            "schéma d'URL refusé (%s) : seules les adresses http et https sont ouvertes."
+            % (parties.scheme or "aucun")
+        )
+    if not parties.netloc:
+        raise ErreurIGN("URL sans domaine : %s" % url)
+    if hotes is not None and (parties.hostname or "").lower() not in tuple(
+        h.lower() for h in hotes
+    ):
+        raise ErreurIGN(
+            "domaine d'URL refusé (%s) : attendu %s."
+            % (parties.hostname, " ou ".join(hotes))
+        )
+    return url
+
+
+def _ouvrir(url, timeout=30, methode=None, hotes=None):
+    """Ouvre une URL après contrôle du schéma (et du domaine si demandé).
+
+    ``urlopen`` accepte ``file://``, ``ftp://`` et tout schéma enregistré par une
+    bibliothèque tierce : c'est la porte d'entrée classique. Le contrôle du
+    schéma est fait ici, avant l'ouverture, et c'est la seule fonction du module
+    qui appelle ``urlopen``.
+    """
+    verifier_url(url, hotes=hotes)
+    requete = urllib.request.Request(url, method=methode, headers={"User-Agent": AGENT})
+    # Le schéma et le domaine viennent d'être contrôlés : pas d'ouverture
+    # possible de file://, ftp:// ou d'un schéma enregistré par une dépendance.
+    return urllib.request.urlopen(requete, timeout=timeout)  # nosec B310
+
+
 def _lire(url, timeout=30):
     """GET simple, avec un User-Agent explicite."""
-    requete = urllib.request.Request(url, headers={"User-Agent": AGENT})
-    with urllib.request.urlopen(requete, timeout=timeout) as reponse:
+    with _ouvrir(url, timeout=timeout) as reponse:
         return reponse.read()
 
 
@@ -141,9 +190,8 @@ def dalles_pour_emprise(bbox_wgs84, maximum=50):
 
 def taille_fichier(url, timeout=30):
     """Poids du fichier en octets (0 si le serveur ne l'annonce pas)."""
-    requete = urllib.request.Request(url, method="HEAD", headers={"User-Agent": AGENT})
     try:
-        with urllib.request.urlopen(requete, timeout=timeout) as reponse:
+        with _ouvrir(url, timeout=timeout, methode="HEAD", hotes=HOTES_DONNEES) as reponse:
             return int(reponse.headers.get("Content-Length") or 0)
     except Exception:
         return 0
@@ -156,14 +204,18 @@ def telecharger(url, destination, progres=None, arret=None, bloc=1024 * 512):
     ``arret()`` est interrogé entre deux blocs ; s'il renvoie vrai, on s'arrête
     et le fichier partiel est supprimé. Le fichier n'apparaît à sa place
     définitive qu'une fois complet (écriture dans ``.part`` puis renommage).
+
+    L'URL est contrôlée avant ouverture : schéma http(s) obligatoire, et domaine
+    du diffuseur imposé — les URLs viennent d'une réponse du WFS.
     """
+    verifier_url(url, hotes=HOTES_DONNEES)
+
     dossier = os.path.dirname(destination)
     if dossier and not os.path.isdir(dossier):
         os.makedirs(dossier)
 
     partiel = destination + ".part"
-    requete = urllib.request.Request(url, headers={"User-Agent": AGENT})
-    with urllib.request.urlopen(requete, timeout=60) as reponse:
+    with _ouvrir(url, timeout=60, hotes=HOTES_DONNEES) as reponse:
         total = int(reponse.headers.get("Content-Length") or 0)
         faits = 0
         with open(partiel, "wb") as fichier:

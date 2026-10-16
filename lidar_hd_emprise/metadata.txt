@@ -11,7 +11,7 @@ about=From the extent shown in QGIS (or from the selection of the active layer),
  Les deux modes exploitent le format COPC. En lecture à distance, seuls les blocs utiles au zoom courant sont récupérés, par requêtes HTTP Range, au lieu des 150 à 250 Mo de la dalle entière.
  Données : LiDAR HD © IGN, open data (licence Etalab 2.0). Dalles de 1 km x 1 km, au moins 10 points/m², classification ASPRS.
  Développé par l'auteur du simulateur de toiture (https://www.simulateur-toiture.fr), qui mesure la surface, la pente et l'orientation d'un toit à partir de ces mêmes dalles LiDAR HD.
-version=1.0.0
+version=1.0.1
 author=Romain, auteur du simulateur de toiture
 email=contact@simulateur-toiture.fr
 homepage=https://www.simulateur-toiture.fr
@@ -24,5 +24,7 @@ experimental=False
 deprecated=False
 hasProcessingProvider=no
 server=False
-changelog=1.0.0 - First release: find the LiDAR HD tiles covering the map extent or the selection of the active layer, download the .copc.laz files or read them remotely through HTTP Range requests, and add the point clouds to the project.
+changelog=1.0.1 - Security fix: every URL is checked for scheme (http/https only) and domain (the IGN data host) before being opened, so a misleading response from the WFS can no longer make the plugin read a local file or another host. Reported by the Bandit scan (B310).
+ 1.0.1 - Correction de sécurité : le schéma (http/https uniquement) et le domaine (l'hôte des données de l'IGN) de chaque URL sont contrôlés avant ouverture. Une réponse détournée du WFS ne peut plus faire lire un fichier local ni un autre domaine. Signalé par l'analyse Bandit (B310).
+ 1.0.0 - First release: find the LiDAR HD tiles covering the map extent or the selection of the active layer, download the .copc.laz files or read them remotely through HTTP Range requests, and add the point clouds to the project.
  1.0.0 - Première version : recherche des dalles LiDAR HD recouvrant l'étendue de la carte ou la sélection de la couche active, téléchargement des fichiers .copc.laz ou lecture à distance par requêtes HTTP Range, ajout des nuages de points au projet.

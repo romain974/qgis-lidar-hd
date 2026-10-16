@@ -62,13 +62,30 @@ Puis **Extensions → Installer/gérer les extensions → Installées**, et coch
 ### Depuis l'archive
 
 ```bash
-python empaqueter.py     # → dist/lidar_hd_emprise-<version>.zip
+python empaqueter.py     # → dist/lidar_hd_emprise-<version>.zip (et contrôle les règles du dépôt officiel)
 ```
 
 Le zip s'installe directement via **Installer depuis un ZIP**.
 
 **QGIS 3.32 ou plus récent est requis** : c'est la version où le fournisseur de nuages de
 points sait ouvrir un COPC distant en HTTP Range.
+
+## Dépôt officiel d'extensions
+
+L'archive est prête pour <https://plugins.qgis.org/plugins/add/>. Le script d'empaquetage
+rejoue les règles de validation documentées par QGIS :
+
+- un unique dossier racine, au nom composé de lettres ASCII, chiffres, `_` et `-` ;
+- `metadata.txt`, `__init__.py` et `LICENSE` présents — la licence sous le nom exact
+  `LICENSE`, sans extension, et sans HTML dans les champs de `metadata.txt` ;
+- `version`, `repository`, `email`, `category` conformes, icône présente, archive sous 20 Mo.
+
+```bash
+python empaqueter.py     # affiche le contenu de l'archive et sort en erreur si une règle casse
+```
+
+Une fois en ligne, la fiche du dépôt référence la page d'accueil du projet — c'est le lien
+que ce dépôt publie.
 
 ## Utilisation
 
@@ -140,4 +157,11 @@ lidar_hd_emprise/
 ├── lidarhd.py         # requêtes IGN et téléchargement (aucune dépendance QGIS)
 ├── metadata.txt       # fiche de l'extension
 └── icon.png
+```
+
+`tests/test_plugin_hors_qgis.py` accepte `PLUGIN_DIR` : pointez-le sur le dossier extrait
+de l'archive pour tester l'artefact publié plutôt que les sources.
+
+```bash
+PLUGIN_DIR=.../lidar_hd_emprise python tests/test_plugin_hors_qgis.py
 ```

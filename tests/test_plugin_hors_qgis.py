@@ -18,7 +18,7 @@ import types
 import unittest
 from unittest.mock import MagicMock
 
-RACINE = os.path.join(
+RACINE = os.environ.get("PLUGIN_DIR") or os.path.join(
     os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "lidar_hd_emprise"
 )
 

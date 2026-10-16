@@ -5,7 +5,7 @@ description=Télécharge et affiche les dalles LiDAR HD de l'IGN (nuages de poin
 about=À partir de l'étendue affichée dans QGIS, le plugin interroge le catalogue LiDAR HD de la Géoplateforme, liste les dalles de nuage de points (.copc.laz) qui la recouvrent et les ajoute à la carte : soit en les téléchargeant, soit en les lisant à distance sans rien télécharger.
  Les deux modes exploitent le format COPC. En lecture à distance, seuls les blocs utiles au zoom courant sont récupérés, par requêtes HTTP Range, au lieu des 150 à 250 Mo de la dalle entière.
  Données : LiDAR HD © IGN, open data (licence Etalab 2.0). Dalles de 1 km x 1 km, au moins 10 points/m², classification ASPRS.
- Développé par l'auteur du <a href="https://www.simulateur-toiture.fr">simulateur de toiture</a>, qui mesure la surface, la pente et l'orientation d'un toit à partir de ces mêmes dalles LiDAR HD.
+ Développé par l'auteur du simulateur de toiture (https://www.simulateur-toiture.fr), qui mesure la surface, la pente et l'orientation d'un toit à partir de ces mêmes dalles LiDAR HD.
 version=1.0.0
 author=Romain, auteur du simulateur de toiture
 email=contact@simulateur-toiture.fr
@@ -19,3 +19,4 @@ experimental=False
 deprecated=False
 hasProcessingProvider=no
 server=False
+changelog=1.0.0 - Première version : recherche des dalles LiDAR HD recouvrant l'étendue de la carte ou la sélection de la couche active, téléchargement des fichiers .copc.laz ou lecture à distance par requêtes HTTP Range, ajout des nuages de points au projet.

@@ -1,0 +1,48 @@
+LiDAR HD - dalles par emprise (extension QGIS)
+===============================================
+
+Auteur : l'auteur du simulateur de toiture <https://www.simulateur-toiture.fr>
+
+Licence du code : GPL-2.0-or-later (voir LICENSE).
+
+
+Données
+-------
+
+Les nuages de points LiDAR HD sont produits et diffusés par l'Institut national
+de l'information géographique et forestière (IGN), dans le cadre du programme
+national LiDAR HD.
+
+  - Producteur            : IGN
+  - Diffuseur             : Géoplateforme <https://geoservices.ign.fr/lidarhd>
+  - Licence               : Etalab 2.0 (open data)
+  - Format                : dalles de 1 km x 1 km, fichiers .copc.laz (LAS 1.4)
+  - Densité et précision  : au moins 10 points/m², précision verticale 10 cm,
+                            précision planimétrique 50 cm
+  - Classification        : ASPRS - sol 2, végétation basse 3, moyenne 4,
+                            haute 5, bâtiments 6, eau 9
+
+Toute publication d'une carte, d'une étude ou d'un outil réalisé à partir de ces
+données doit créditer l'IGN.
+
+
+Bibliothèques
+-------------
+
+Ce plugin n'embarque aucune bibliothèque tierce. Il s'appuie uniquement sur :
+
+  - PyQGIS et Qt, fournis par QGIS, pour l'interface et le fournisseur de nuages
+    de points ;
+  - la bibliothèque standard de Python, pour les requêtes HTTP (urllib.request).
+
+
+Services interrogés
+-------------------
+
+  - https://data.geopf.fr/wfs/ows
+      catalogue des dalles LiDAR HD (nom, emprise, nombre de points, URL du nuage)
+  - https://data.geopf.fr/telechargement/download/LiDARHD-NUALID/...
+      les fichiers .copc.laz eux-mêmes
+
+Ces services sont publics et ne demandent aucune authentification. Le plugin ne
+transmet aucune donnée personnelle et n'effectue aucune mesure d'audience.
